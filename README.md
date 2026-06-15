@@ -28,7 +28,7 @@ after fixing that problem it was time to remember the SQL Commands (nothing that
 
 At the end once i solved all the problems with ADO.NET and remembering the SQL Commands everything went smoothly, or well almost everything.
 
-##Things to mention
+## Things to mention
 - NON AI WAS USED IN THE REALIZATION OF THIS PROJECT
 - I tried to make this project using less than 300 lines of code, why?, well i really don´t know, to try to improve the readabilty of the code maybe ¯\_(ツ)_/¯
 - An object under the name of "Habit" was created to simplify the process of getting and storing the data.
