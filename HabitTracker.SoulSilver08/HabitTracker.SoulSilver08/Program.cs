@@ -11,8 +11,6 @@ using (SqliteConnection connection = new SqliteConnection(connString))
     {
         connection.Open();
         var tableCmd = connection.CreateCommand();
-        if (connection.Database == null)
-            Console.WriteLine("Database created!!!");
         tableCmd.CommandText = @"CREATE TABLE IF NOT EXISTS habits_table (Id INTEGER PRIMARY KEY AUTOINCREMENT, Habit_Name TEXT, Amount TEXT, Date_Time DATETIME, Note TEXT)";
         tableCmd.ExecuteNonQuery();
         connection.Close();
@@ -24,7 +22,7 @@ using (SqliteConnection connection = new SqliteConnection(connString))
 }
 
 string? optionSelection = "";
-DataTable table = GetTableFromDatabase();
+DataTable? table = GetTableFromDatabase();
 
 while (optionSelection != "x")
 {
@@ -33,80 +31,67 @@ while (optionSelection != "x")
     Console.WriteLine("---------------------\n");
     Console.WriteLine("What do you want to do today?");
     Console.WriteLine("C\t - Create a new entry");
-    if (table.Rows.Count != 0) Console.WriteLine(@"R	 - Read last entries
-U	 - Update last entries
-D	 - Delete a last entry");
+    if (table.Rows.Count != 0) Console.WriteLine("R	 - Read last entries\nU	 - Update last entries\nD	 - Delete a last entry");
     Console.WriteLine("\nX\t - Exit");
     optionSelection = Console.ReadLine() ?? "";
 
-    if (table.Rows.Count > 0)
-
-    switch (optionSelection.ToLower())
+    if (table.Rows.Count < 1 && Regex.IsMatch(optionSelection.ToLower(), "[r|u|d]")) 
     {
-        case "c":
-            CreateFunction();
-            break;
-        case "r":
-            if (table.Rows.Count == 0) 
-            {
-                Console.Write("\nInvalid option, please input a valid option.\nPress enter to continue....");
-                Console.ReadLine();
-                break;
-            }
-            ReadFunction();
-            break;
-        case "u":
-            if (table.Rows.Count == 0)
-            {
-                Console.Write("\nInvalid option, please input a valid option.\nPress enter to continue....");
-                Console.ReadLine();
-                break;
-            }
-            UpdateFunction();
-            break;
-        case "d":
-            if (table.Rows.Count == 0)
-            {
-                Console.Write("\nInvalid option, please input a valid option.\nPress enter to continue....");
-                Console.ReadLine();
-                break;
-            }
-            DeleteFunction();
-            break;
-        case "x":
-            Console.WriteLine("\nGood Bye!!!\n");
-            break;
-        case "#test[f]":
-            TestFill();
-            break;
-        default:
-            Console.Write("\nInvalid option, please input a valid option.\nPress enter to continue....");
-            Console.ReadLine();
-            break;
+        Console.Write("\nInvalid option, please input a valid option.\nPress enter to continue....");
+        Console.ReadLine();
     }
+    else
+        switch (optionSelection.ToLower())
+        {
+            case "c":
+                CreateFunction();
+                break;
+            case "r":
+                ReadFunction();
+                break;
+            case "u":
+                UpdateFunction();
+                break;
+            case "d":
+                DeleteFunction();
+                break;
+            case "x":
+                Console.WriteLine("\nGood Bye!!!\n");
+                break;
+            case "#test[f]":
+                TestFill();
+                break;
+            default:
+                Console.Write("\nInvalid option, please input a valid option.\nPress enter to continue....");
+                Console.ReadLine();
+                break;
+        }
 } 
 
 void CreateFunction()
 {
-    Habit habitToTrack = new();
+    string[] messages = { "\nEnter the name of the habit:", "\nEnter the value to register:", "\nEnter the date of the habit [YYYY-MM-DD]:", "\nAdd a note" };
+    string?[] inputs = new string[4];
 
-    Console.Clear();
-    Console.WriteLine("---- Create a new entry ----");
-    Console.WriteLine("----------------------------");
+    for (int i = 0; i < messages.Length; i++) 
+    {
+        do
+        {
+            Console.Clear();
+            Console.WriteLine("---- Create a new entry ----");
+            Console.WriteLine("----------------------------");
+            Console.WriteLine(messages[i]);
+            inputs[i] = Console.ReadLine();
 
-    Console.WriteLine("\nEnter the name of the habit:");
-    habitToTrack.Name = Console.ReadLine() ?? "Null";
+            if (inputs[i] == "") 
+            {
+                Console.WriteLine("Ivalid input");
+                Console.ReadLine();
+            }
+        } while (inputs[i] == "");
+    }
 
-    Console.WriteLine("\nEnter the value to register:");
-    habitToTrack.Amount = Console.ReadLine() ?? "Null";
-
-    Console.WriteLine("\nEnter the date of the habit [YYYY-MM-DD]:");
-    habitToTrack.DateTime = Console.ReadLine() ?? "2000-01-01";
-
-    Console.WriteLine("\nDo you want to add a note?");
-    habitToTrack.Note = Console.ReadLine() ?? "";
-
-    ConnectionToDatabase($"INSERT INTO habits_table (Habit_Name, Amount, Date_Time, Note) VALUES ('{habitToTrack.Name}', '{habitToTrack.Amount}', '{habitToTrack.DateTime}', '{habitToTrack.Note}')");
+    ConnectionToDatabase($"INSERT INTO habits_table (Habit_Name, Amount, Date_Time, Note) VALUES ('{inputs[0]}', '{inputs[1]}', '{inputs[2]}', '{inputs[3]}')");
     table = GetTableFromDatabase();
 
     Console.WriteLine("Habit Tracked!!!");
@@ -153,6 +138,7 @@ void UpdateFunction()
             {
                 Console.Clear();
                 Console.WriteLine("---- Update last entries ----");
+                Console.WriteLine($"\nHabit: {table.Rows[i][1]}\tAmount: {table.Rows[i][2]}\tDate: {table.Rows[i][3]}\nNote: \n{table.Rows[i][4]}\n");
                 Console.WriteLine("-----------------------------\nNOTE: If you don´t want to update a value just leave the input in blank.");
 
                 Habit updatedHabit = new();
@@ -212,16 +198,22 @@ void DeleteFunction()
 
                 Console.WriteLine($"ID: {table.Rows[i][0]} |\tHabit: {table.Rows[i][1]}\tAmount: {table.Rows[i][2]}\tDate: {table.Rows[i][3]}\nNote: \n{table.Rows[i][4]}");
                 Console.WriteLine("\n-----------------------------\n");
-                Console.WriteLine("Are you sure that you want to delete this entry?");
-                if (Console.ReadLine()?.ToLower() == "y")
-                {
-                    ConnectionToDatabase($"DELETE FROM habits_table WHERE Id = '{idSelected}'");
-                    table = GetTableFromDatabase();
+                Console.WriteLine("Are you sure that you want to delete this entry?\ninput Y to confirm or N to cancel");
 
-                    Console.WriteLine("\nENTRY DELETED\n");
-                    Console.ReadLine();
+                switch (Console.ReadLine()?.ToLower()) 
+                {
+                    case "y":
+                        ConnectionToDatabase($"DELETE FROM habits_table WHERE Id = '{idSelected}'");
+                        table = GetTableFromDatabase();
+
+                        Console.WriteLine("\nENTRY DELETED\n");
+                        Console.ReadLine();
+                        return;
+                    case "n":
+                        Console.WriteLine("Entry NOT deleted");
+                        Console.ReadLine();
+                        return;
                 }
-                return;
             }
         }
 
